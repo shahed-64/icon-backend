@@ -15,92 +15,106 @@ class StudentController extends Controller
     /**
      * Display all students
      */
-    public function index()
-    {
-        // classGroup
-        $students = Student::with([
-            'payments',
-            'section',
-            'classInfo',
-            'classGroup',
-            'shift'
-        ])
-            ->orderBy('id', 'desc')
-            ->get();
+public function index(Request $request)
+{
+    $perPage = (int) $request->get('per_page', 10);
+    $perPage = min(max($perPage, 1), 100);
 
-        $allMonths = [
-            'January',
-            'February',
-            'March',
-            'April',
-            'May',
-            'June',
-            'July',
-            'August',
-            'September',
-            'October',
-            'November',
-            'December'
-        ];
+    $search = trim($request->get('search', ''));
+    $classId = $request->get('class_id');
 
-        $currentMonth = Carbon::now()->month;
+    // payments-কে সরাসরি here load না করে শুধু প্রয়োজনীয় রিলেশনগুলো লোড করা হচ্ছে
+    $query = Student::with([
+        'section',
+        'classInfo',
+        'classGroup',
+        'shift'
+    ])->orderBy('id', 'desc');
 
-        foreach ($students as $student) {
-
-            $paidMonths = $student->payments
-                ->pluck('month')
-                ->toArray();
-
-            $admissionMonth = Carbon::parse(
-                $student->admission_date
-            )->month;
-
-            $monthsTillNow = array_slice(
-                $allMonths,
-                $admissionMonth - 1,
-                max(
-                    0,
-                    $currentMonth - $admissionMonth + 1
-                )
-            );
-
-            $dueMonths = array_values(
-                array_diff(
-                    $monthsTillNow,
-                    $paidMonths
-                )
-            );
-
-            $monthsTillDecember = array_slice(
-                $allMonths,
-                $admissionMonth - 1
-            );
-
-            $availableMonths = array_values(
-                array_diff(
-                    $monthsTillDecember,
-                    $paidMonths
-                )
-            );
-
-            $student->setAttribute(
-                'due_months',
-                $dueMonths
-            );
-
-            $student->setAttribute(
-                'available_months',
-                $availableMonths
-            );
-        }
-
-        return response()->json([
-            'status' => true,
-            'students' => $students
-        ]);
+    /*
+    |--------------------------------------------------------------------------
+    | Search
+    |--------------------------------------------------------------------------
+    */
+    if ($search !== '') {
+        $query->where(function ($q) use ($search) {
+            $q->where('full_name', 'like', '%' . $search . '%')
+                ->orWhere('email', 'like', '%' . $search . '%')
+                ->orWhere('student_id', 'like', '%' . $search . '%');
+        });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Class Filter
+    |--------------------------------------------------------------------------
+    */
+    if (!empty($classId)) {
+        $query->where('class_id', $classId);
+    }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pagination
+    |--------------------------------------------------------------------------
+    */
+    $students = $query->paginate($perPage);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Optimized Due / Available Months Calculation
+    |--------------------------------------------------------------------------
+    */
+    $allMonths = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    $currentMonth = Carbon::now()->month;
+
+    // পেমেন্ট ডেటా একসাথে কুয়েরি করে নিয়ে আসা বা কালেকشن অপ্টিমাইজ করা যেতে পারে
+    // অথবা রিলেশন থেকে শুধু 'month' ফিল্ড সিলেक्ट করে লোড করা:
+    $students->load(['payments' => function ($q) {
+        $q->select('id', 'student_id', 'month');
+    }]);
+
+    foreach ($students->items() as $student) {
+        $paidMonths = $student->payments->pluck('month')->toArray();
+
+        $admissionMonth = $student->admission_date
+            ? Carbon::parse($student->admission_date)->month
+            : 1;
+
+        $monthsTillNow = array_slice(
+            $allMonths,
+            $admissionMonth - 1,
+            max(0, $currentMonth - $admissionMonth + 1)
+        );
+
+        $dueMonths = array_values(array_diff($monthsTillNow, $paidMonths));
+
+        $monthsTillDecember = array_slice($allMonths, $admissionMonth - 1);
+        $availableMonths = array_values(array_diff($monthsTillDecember, $paidMonths));
+
+        $student->setAttribute('due_months', $dueMonths);
+        $student->setAttribute('available_months', $availableMonths);
+    }
+
+    $totalStudents = Student::count();
+
+    return response()->json([
+        'status' => true,
+        'students' => $students->items(),
+        'pagination' => [
+            'current_page' => $students->currentPage(),
+            'last_page' => $students->lastPage(),
+            'per_page' => $students->perPage(),
+            'total' => $students->total(),
+            'from' => $students->firstItem(),
+            'to' => $students->lastItem(),
+        ],
+        'total_students' => $totalStudents,
+    ]);
+}
     /**
      * Store a newly created student
      */

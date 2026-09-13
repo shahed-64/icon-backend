@@ -12,19 +12,50 @@ class TeacherController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // shifts রিলেশনসহ টিচার ফেচ করা
-        $teachers = Teacher::with('shifts')->latest()->get()->map(function ($teacher) {
-            if ($teacher->image) {
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = min(max($perPage, 1), 100);
+
+        // কুয়েরি বিল্ডার ও শিফট রিলেশন ইগার লোডিং
+        $query = Teacher::with('shifts');
+
+        // সার্চ ফিল্টার (নাম, আইডি বা ইমেইল দিয়ে)
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                  ->orWhere('teacher_id', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // ডিপার্টমেন্ট ফিল্টার
+        if ($request->filled('department')) {
+            $query->where('department', $request->input('department'));
+        }
+
+        $teachers = $query->latest()->paginate($perPage);
+
+        // ইমেজের ফুল পাথ যুক্ত করা
+        $teachers->getCollection()->transform(function ($teacher) {
+            if ($teacher->image && !str_starts_with($teacher->image, 'http')) {
                 $teacher->image = asset('storage/' . $teacher->image);
             }
             return $teacher;
         });
 
         return response()->json([
-            'status' => true,
-            'data'   => $teachers
+            'status'     => true,
+            'data'       => $teachers->items(),
+            'pagination' => [
+                'current_page' => $teachers->currentPage(),
+                'last_page'    => $teachers->lastPage(),
+                'per_page'     => $teachers->perPage(),
+                'total'        => $teachers->total(),
+                'from'         => $teachers->firstItem(),
+                'to'           => $teachers->lastItem(),
+            ],
         ], 200);
     }
 
@@ -33,7 +64,6 @@ class TeacherController extends Controller
      */
     public function store(Request $request)
     {
-        // ১. ভ্যালিডেশন
         $validated = $request->validate([
             'full_name'    => 'required|string|max:255',
             'designation'  => 'required|string|max:255',
@@ -44,11 +74,10 @@ class TeacherController extends Controller
             'joining_date' => 'required|date',
             'salary'       => 'nullable|numeric',
             'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'shift_ids'    => 'nullable|array', // মাল্টিপল শিফট আইডির অ্যারে
+            'shift_ids'    => 'nullable|array',
             'shift_ids.*'  => 'exists:shifts,id',
         ]);
 
-        // ২. ইমেজ আপলোড
         $imagePath = null;
         if ($request->hasFile('image')) {
             $file = $request->file('image');
@@ -56,7 +85,7 @@ class TeacherController extends Controller
             $imagePath = $file->storeAs('teachers', $filename, 'public');
         }
 
-        // ৩. Teacher ID Generate
+        // Teacher ID Generate
         $lastTeacher = Teacher::latest('id')->first();
         if ($lastTeacher && $lastTeacher->teacher_id) {
             $lastNumber = (int) str_replace('TCH-', '', $lastTeacher->teacher_id);
@@ -65,7 +94,6 @@ class TeacherController extends Controller
             $teacherId = 'TCH-1001';
         }
 
-        // ৪. ডাটা সেভ
         $teacher = Teacher::create([
             'teacher_id'   => $teacherId,
             'full_name'    => $request->full_name,
@@ -74,15 +102,12 @@ class TeacherController extends Controller
             'qualification'=> $request->qualification,
             'phone'        => $request->phone,
             'email'        => $request->email,
-            'join_date' => $request->joining_date ?? now()->toDateString(),
+            'join_date'    => $request->joining_date ?? now()->toDateString(),
             'salary'       => $request->salary ?? 0,
             'image'        => $imagePath,
         ]);
 
-        // ৫. শিফটগুলো সিঙ্ক করা (Pivot Table এ সেভ হবে)
         $teacher->shifts()->sync($request->shift_ids ?? []);
-
-        // শিফট রিলেশনসহ ডাটা লোড করা
         $teacher->load('shifts');
 
         if ($teacher->image) {
@@ -103,7 +128,7 @@ class TeacherController extends Controller
     {
         $teacher->load('shifts');
 
-        if ($teacher->image) {
+        if ($teacher->image && !str_starts_with($teacher->image, 'http')) {
             $teacher->image = asset('storage/' . $teacher->image);
         }
 
@@ -122,20 +147,19 @@ class TeacherController extends Controller
             'full_name'    => 'required|string|max:255',
             'designation'  => 'required|string|max:255',
             'department'   => 'required|string|max:255',
-            'qualification'=> 'required|string|max:255',
-            'phone'        => 'required|string|max:20',
+            'qualification'=> 'nullable|string|max:255',
+            'phone'        => 'nullable|string|max:20',
             'email'        => 'required|email|unique:teachers,email,' . $teacher->id,
             'joining_date' => 'nullable|date',
             'join_date'    => 'nullable|date',
             'salary'       => 'nullable|numeric',
             'image'        => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'shift_ids'    => 'nullable|array', // মাল্টিপল শিফট আইডির অ্যারে
+            'shift_ids'    => 'nullable|array',
             'shift_ids.*'  => 'exists:shifts,id',
         ]);
 
-        $imagePath = $teacher->image; // Keep existing image path by default
+        $imagePath = $teacher->image;
 
-        // Custom Image Update Logic
         if ($request->hasFile('image')) {
             if ($teacher->image && Storage::disk('public')->exists($teacher->image)) {
                 Storage::disk('public')->delete($teacher->image);
@@ -146,7 +170,6 @@ class TeacherController extends Controller
             $imagePath = $file->storeAs('teachers', $filename, 'public');
         }
 
-        // ডাটা আপডেট
         $teacher->update([
             'full_name'    => $request->full_name,
             'designation'  => $request->designation,
@@ -154,18 +177,15 @@ class TeacherController extends Controller
             'qualification'=> $request->qualification,
             'phone'        => $request->phone,
             'email'        => $request->email,
-            'join_date' => $request->joining_date ?? now()->toDateString(),
+            'join_date'    => $request->joining_date ?? $request->join_date ?? $teacher->join_date,
             'salary'       => $request->salary ?? $teacher->salary,
             'image'        => $imagePath,
         ]);
 
-        // শিফটগুলো সিঙ্ক করা
         $teacher->shifts()->sync($request->shift_ids ?? []);
-
-        // শিফট রিলেশনসহ ডাটা রিলোড করা
         $teacher->load('shifts');
 
-        if ($teacher->image) {
+        if ($teacher->image && !str_starts_with($teacher->image, 'http')) {
             $teacher->image = asset('storage/' . $teacher->image);
         }
 
@@ -181,14 +201,11 @@ class TeacherController extends Controller
      */
     public function destroy(Teacher $teacher)
     {
-        // Delete image file from storage if exists
         if ($teacher->image && Storage::disk('public')->exists($teacher->image)) {
             Storage::disk('public')->delete($teacher->image);
         }
 
-        // পিভট টেবিল থেকে রিলেশন ডিলিট করা
         $teacher->shifts()->detach();
-
         $teacher->delete();
 
         return response()->json([

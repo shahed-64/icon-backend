@@ -8,20 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ClssM extends Model
 {
+    protected $table = 'clss_m_s';
+
     protected $guarded = [];
 
-    /**
-     * একটি ক্লাসের অনেক Student থাকতে পারে।
-     */
     public function students(): HasMany
     {
         return $this->hasMany(Student::class, 'class_id');
     }
 
-    /**
-     * একটি ক্লাসে অনেক Subject থাকতে পারে
-     * এবং একটি Subject অনেক Class-এ থাকতে পারে।
-     */
     public function subjects(): BelongsToMany
     {
         return $this->belongsToMany(

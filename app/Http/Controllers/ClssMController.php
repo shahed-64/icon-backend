@@ -62,20 +62,20 @@ class ClssMController extends Controller
     /**
      * Display the specified class.
      */
-    public function show(ClssM $clssM)
+    public function show(ClssM $class)
     {
-        $clssM->load('subjects');
+        $class->load('subjects');
 
         return response()->json([
             'status' => true,
-            'class'  => $clssM
+            'class'  => $class
         ], 200);
     }
 
     /**
      * Show the form for editing the specified class.
      */
-    public function edit(ClssM $clssM)
+    public function edit(ClssM $class)
     {
         // API-এর ক্ষেত্রে প্রয়োজন নেই
     }
@@ -83,7 +83,7 @@ class ClssMController extends Controller
     /**
      * Update the specified class.
      */
-    public function update(Request $request, ClssM $clssM)
+    public function update(Request $request, ClssM $class)
     {
         $request->validate([
             'class_name' => 'required|string|max:255',
@@ -92,34 +92,33 @@ class ClssMController extends Controller
         ]);
 
         // Class update
-        $clssM->update([
+        $class->update([
             'class_name' => $request->class_name
         ]);
 
-        // Subjects sync
         // Selected subjects থাকবে,
         // unselected subjects pivot table থেকে remove হবে।
-        $clssM->subjects()->sync($request->subject_ids ?? []);
+        $class->subjects()->sync($request->subject_ids ?? []);
 
         // Subjects সহ fresh data
-        $clssM->load('subjects');
+        $class->load('subjects');
 
         return response()->json([
             'status'  => true,
             'message' => 'Class Updated Successfully',
-            'class'   => $clssM
+            'class'   => $class
         ], 200);
     }
 
     /**
      * Remove the specified class.
      */
-    public function destroy(ClssM $clssM)
+    public function destroy(ClssM $class)
     {
-        $clssM->delete();
+        $class->delete();
 
         return response()->json([
-            'status'  => true,
+            'status' => true,
             'message' => 'Class Deleted Successfully'
         ], 200);
     }
