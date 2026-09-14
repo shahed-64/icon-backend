@@ -10,18 +10,33 @@ class InstituteInfoController extends Controller
     /**
      * Display the institute information.
      */
-    public function index()
-    {
-        $institute = InstituteInfo::first();
+public function index()
+{
+    $start = microtime(true);
 
-        return response()->json([
-            'success' => true,
-            'data' => $institute
-                ? $this->formatInstitute($institute)
-                : null,
-        ]);
-    }
+    $institute = InstituteInfo::first();
 
+    $dbTime = microtime(true) - $start;
+
+    $start = microtime(true);
+
+    $data = $institute
+        ? $this->formatInstitute($institute)
+        : null;
+
+    $formatTime = microtime(true) - $start;
+
+    \Log::info('Institute API Timing', [
+        'db_time' => $dbTime,
+        'format_time' => $formatTime,
+        'total_time' => $dbTime + $formatTime,
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'data' => $data,
+    ]);
+}
 
     /**
      * Store institute information.

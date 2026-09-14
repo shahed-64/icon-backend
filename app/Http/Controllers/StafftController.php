@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Staff;
 use App\Models\Student;
 use App\Models\Payment;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -42,6 +43,7 @@ class StafftController extends Controller
         ]);
 
         $imagePath = null;
+
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('staffs', 'public');
         }
@@ -93,15 +95,15 @@ class StafftController extends Controller
     public function update(Request $request, Staff $staff)
     {
         $request->validate([
-            'name'      => 'required',
-            'user_name' => 'required',
-            'skill'     => 'required',
-            'role'      => 'required',
-            'shift_id'  => 'required|exists:shifts,id',
-            'email'     => 'required|email|unique:staff,email,' . $staff->id,
-            'password'  => 'nullable|confirmed',
-            'image'     => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'salary'    => 'nullable|numeric',
+            'name'       => 'required',
+            'user_name'  => 'required',
+            'skill'      => 'required',
+            'role'       => 'required',
+            'shift_id'   => 'required|exists:shifts,id',
+            'email'      => 'required|email|unique:staff,email,' . $staff->id,
+            'password'   => 'nullable|confirmed',
+            'image'      => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'salary'     => 'nullable|numeric',
         ]);
 
         $data = [
@@ -116,9 +118,11 @@ class StafftController extends Controller
 
         // Replace old image with the new one
         if ($request->hasFile('image')) {
+
             if ($staff->image && Storage::disk('public')->exists($staff->image)) {
                 Storage::disk('public')->delete($staff->image);
             }
+
             $data['image'] = $request->file('image')->store('staffs', 'public');
         }
 
@@ -181,13 +185,21 @@ class StafftController extends Controller
         ]);
     }
 
+    /**
+     * Dashboard
+     */
     public function dashboard(Request $request)
     {
-        $totalStaff     = Staff::count();
+        $totalStaff      = Staff::count();
         $totalStudents   = Student::count();
         $totalPayments   = Payment::count();
+        $totalTeachers   = Teacher::count();
         $totalCollection = Payment::sum('paid_amount');
-        $recentStaff     = Staff::with('shift')->latest()->take(5)->get();
+
+        $recentStaff = Staff::with('shift')
+            ->latest()
+            ->take(5)
+            ->get();
 
         $monthlyCollection = Payment::select(
             DB::raw('MONTH(payment_date) as month'),
@@ -205,6 +217,7 @@ class StafftController extends Controller
             'total_staff'        => $totalStaff,
             'total_students'     => $totalStudents,
             'total_payments'     => $totalPayments,
+            'total_teachers'     => $totalTeachers,
             'total_collection'   => $totalCollection,
             'recent_staff'       => $recentStaff,
             'monthly_collection' => $monthlyCollection,
@@ -213,11 +226,16 @@ class StafftController extends Controller
                 'name'        => $authUser->name,
                 'role'        => $authUser->role,
                 'designation' => $authUser->skill ?? $authUser->role,
-                'image'       => $authUser->image ? asset('storage/' . $authUser->image) : null,
+                'image'       => $authUser->image
+                    ? asset('storage/' . $authUser->image)
+                    : null,
             ] : null
         ]);
     }
 
+    /**
+     * Logout
+     */
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
