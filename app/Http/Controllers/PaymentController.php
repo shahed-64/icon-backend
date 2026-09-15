@@ -14,7 +14,7 @@ class PaymentController extends Controller
     /* =========================
         ALL PAYMENTS LIST
     ========================= */
-    public function index()
+    public function index(Request $request)
     {
         $totalPaidAmount = Payment::sum('paid_amount');
         $totalDueAmount = Payment::sum('due_amount');
@@ -30,8 +30,12 @@ class PaymentController extends Controller
         | Today's Collection
         |--------------------------------------------------------------------------
         */
-        $todayCollection = Payment::whereDate('payment_date', today())->sum('paid_amount');
-        $todayOtherCollection = OtherPayment::whereDate('payment_date', today())->sum('total_amount');
+        $todayCollection = Payment::whereDate('payment_date', today())
+            ->sum('paid_amount');
+
+        $todayOtherCollection = OtherPayment::whereDate('payment_date', today())
+            ->sum('total_amount');
+
         $todayCollection += $todayOtherCollection;
 
         /*
@@ -39,14 +43,22 @@ class PaymentController extends Controller
         | This Month Collection (Paid + Admission + Exam + Other Payment)
         |--------------------------------------------------------------------------
         */
-        $thisMonthCollectionQuery = Payment::whereMonth('payment_date', now()->month)
+        $thisMonthCollectionQuery = Payment::whereMonth(
+                'payment_date',
+                now()->month
+            )
             ->whereYear('payment_date', now()->year)
-            ->select(DB::raw('SUM(paid_amount + admission_fee + exam_fee) as total'))
+            ->select(
+                DB::raw('SUM(paid_amount + admission_fee + exam_fee) as total')
+            )
             ->value('total');
 
         $thisMonthCollection = (float) $thisMonthCollectionQuery;
 
-        $otherPaymentCollection = OtherPayment::whereMonth('payment_date', now()->month)
+        $otherPaymentCollection = OtherPayment::whereMonth(
+                'payment_date',
+                now()->month
+            )
             ->whereYear('payment_date', now()->year)
             ->sum('total_amount');
 
@@ -57,7 +69,10 @@ class PaymentController extends Controller
         | This Month Due
         |--------------------------------------------------------------------------
         */
-        $thisMonthDue = Payment::whereMonth('payment_date', now()->month)
+        $thisMonthDue = Payment::whereMonth(
+                'payment_date',
+                now()->month
+            )
             ->whereYear('payment_date', now()->year)
             ->sum('due_amount');
 
@@ -67,9 +82,9 @@ class PaymentController extends Controller
         |--------------------------------------------------------------------------
         */
         $monthlyPayments = Payment::select(
-            DB::raw('MONTH(payment_date) as month'),
-            DB::raw('SUM(paid_amount) as total')
-        )
+                DB::raw('MONTH(payment_date) as month'),
+                DB::raw('SUM(paid_amount) as total')
+            )
             ->whereYear('payment_date', date('Y'))
             ->groupBy(DB::raw('MONTH(payment_date)'))
             ->orderBy('month')
@@ -81,7 +96,11 @@ class PaymentController extends Controller
         |--------------------------------------------------------------------------
         */
         $recentPayments = Payment::with('student')
-            ->whereDate('payment_date', '>=', Carbon::today()->subDays(6))
+            ->whereDate(
+                'payment_date',
+                '>=',
+                Carbon::today()->subDays(6)
+            )
             ->orderBy('payment_date', 'desc')
             ->get();
 
@@ -92,36 +111,65 @@ class PaymentController extends Controller
         */
         $currentMonth = now()->format('F');
 
-        $runningMonthUnpaidStudents = Student::whereNotExists(function ($query) use ($currentMonth) {
-            $query->select(DB::raw(1))
-                ->from('payments')
-                ->whereColumn('payments.student_id', 'students.id')
-                ->where('payments.month', $currentMonth);
-        })->count();
+        $runningMonthUnpaidStudents = Student::whereNotExists(
+            function ($query) use ($currentMonth) {
+                $query->select(DB::raw(1))
+                    ->from('payments')
+                    ->whereColumn(
+                        'payments.student_id',
+                        'students.id'
+                    )
+                    ->where(
+                        'payments.month',
+                        $currentMonth
+                    );
+            }
+        )->count();
 
         /*
         |--------------------------------------------------------------------------
         | Total Unpaid Students
         |--------------------------------------------------------------------------
         */
-        $totalUnpaidStudents = Student::whereNotExists(function ($query) {
-            $query->select(DB::raw(1))
-                ->from('payments')
-                ->whereColumn('payments.student_id', 'students.id');
-        })->count();
+        $totalUnpaidStudents = Student::whereNotExists(
+            function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('payments')
+                    ->whereColumn(
+                        'payments.student_id',
+                        'students.id'
+                    );
+            }
+        )->count();
 
         /*
         |--------------------------------------------------------------------------
-        | Payments List (heavy 'student.payments' রিলেশন অপ্টিমাইজ করা হয়েছে)
+        | Payments List
+        |--------------------------------------------------------------------------
+        | Pagination added here.
+        | Only 20 records will be loaded per page.
         |--------------------------------------------------------------------------
         */
-        $payments = Payment::with(['student' => function ($q) {
-            $q->select('id', 'full_name', 'student_id', 'class_id');
-        }])
-            ->latest()
-            ->limit(300) // একসাথে হাজার হাজার রেকর্ড না টেনে অপ্টিমাইজড লিমিট রাখা হলো
-            ->get();
+        $perPage = 20;
 
+        $payments = Payment::with([
+            'student' => function ($q) {
+                $q->select(
+                    'id',
+                    'full_name',
+                    'student_id',
+                    'class_id'
+                );
+            }
+        ])
+            ->latest()
+            ->paginate($perPage);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response
+        |--------------------------------------------------------------------------
+        */
         return response()->json([
             'status' => true,
             'message' => 'Payments fetched successfully',
@@ -147,7 +195,7 @@ class PaymentController extends Controller
             // Recent Payments
             'recent_payments' => $recentPayments,
 
-            // Table
+            // Paginated Payments
             'payments' => $payments,
         ]);
     }
@@ -262,17 +310,24 @@ class PaymentController extends Controller
         $students = Student::with('payments')->get();
 
         $report = $students->map(function ($student) {
+
             $totalPaid = $student->payments->sum('paid_amount');
             $totalDue = $student->payments->sum('due_amount');
 
-            $startDate = Carbon::parse($student->admission_date)->startOfMonth();
+            $startDate = Carbon::parse(
+                $student->admission_date
+            )->startOfMonth();
+
             $endDate = Carbon::now()->startOfMonth();
 
-            $paidMonths = $student->payments->pluck('month')->toArray();
+            $paidMonths = $student->payments
+                ->pluck('month')
+                ->toArray();
 
             $unpaidMonths = 0;
 
             while ($startDate <= $endDate) {
+
                 $monthName = $startDate->format('F');
 
                 if (!in_array($monthName, $paidMonths)) {
@@ -283,6 +338,7 @@ class PaymentController extends Controller
             }
 
             $unpaidAmount = $unpaidMonths * $student->monthly_fee;
+
             $totalOutstanding = $totalDue + $unpaidAmount;
 
             return [
@@ -309,9 +365,11 @@ class PaymentController extends Controller
         ]);
     }
 
-    /* =========================
-        UPDATE PAYMENT
-    ========================= */
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE PAYMENT
+    |--------------------------------------------------------------------------
+    */
     public function update(Request $request, $id)
     {
         $payment = Payment::find($id);
@@ -340,8 +398,10 @@ class PaymentController extends Controller
             'due_amount' => $dueAmount,
             'payment_method' => $request->payment_method,
             'month' => $request->month,
-            'admission_fee' => $request->admission_fee ?? $payment->admission_fee,
-            'exam_fee' => $request->exam_fee ?? $payment->exam_fee,
+            'admission_fee' => $request->admission_fee
+                ?? $payment->admission_fee,
+            'exam_fee' => $request->exam_fee
+                ?? $payment->exam_fee,
             'status' => $dueAmount <= 0 ? 'paid' : 'due',
         ]);
 
