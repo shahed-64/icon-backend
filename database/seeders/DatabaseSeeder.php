@@ -14,26 +14,17 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         Staff::create([
-            'name' => 'Super Manager',
+            'name' => 'MOSHARRAF HOSSAIN',
             'user_name' => 'manager',
             'skill' => 'Administration',
             'role' => 'Manager',
-            'email' => 'manager@coaching.com',
-            'password' => Hash::make('12345678'),
+            'email' => 'icon@academy.com',
+            'password' => Hash::make('Icon@Academy!6475#'),
             'image' => null,
             'salary' => 000
         ]);
 
-        Staff::create([
-            'name' => 'Jubair Ahmed Masum',
-            'user_name' => 'jubair',
-            'skill' => 'Administration',
-            'role' => 'Manager',
-            'email' => 'masum@coaching.com',
-            'password' => Hash::make('12345678'),
-            'image' => null,
-            'salary' => 000
-        ]);
+
 
         // Grading System Seeder
         $this->call([
