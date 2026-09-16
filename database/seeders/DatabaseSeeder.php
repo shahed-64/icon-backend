@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
             'skill' => 'Administration',
             'role' => 'Manager',
             'email' => 'icon@academy.com',
-            'password' => Hash::make('Icon@Academy!6475#'),
+            'password' => Hash::make('Icon@Academy!6475mD#'),
             'image' => null,
             'salary' => 000
         ]);
