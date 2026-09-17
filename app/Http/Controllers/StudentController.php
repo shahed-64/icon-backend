@@ -30,15 +30,22 @@ class StudentController extends Controller
             'classGroup',
             'shift',
             'payments' => function ($q) {
-                $q->select('id', 'student_id', 'month', 'paid_amount', 'due_amount', 'status');
+                $q->select(
+                    'id',
+                    'student_id',
+                    'month',
+                    'paid_amount',
+                    'due_amount',
+                    'status'
+                );
             }
         ])->orderBy('id', 'desc');
 
-        /*
-        |--------------------------------------------------------------------------
-        | Search
-        |--------------------------------------------------------------------------
-        */
+        /**
+         * --------------------------------------------------------------------------
+         * Search
+         * --------------------------------------------------------------------------
+         */
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'like', '%' . $search . '%')
@@ -47,31 +54,42 @@ class StudentController extends Controller
             });
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Class Filter
-        |--------------------------------------------------------------------------
-        */
+        /**
+         * --------------------------------------------------------------------------
+         * Class Filter
+         * --------------------------------------------------------------------------
+         */
         if (!empty($classId)) {
             $query->where('class_id', $classId);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Pagination
-        |--------------------------------------------------------------------------
-        */
+        /**
+         * --------------------------------------------------------------------------
+         * Pagination
+         * --------------------------------------------------------------------------
+         */
         $students = $query->paginate($perPage);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Optimized Due / Available Months Calculation
-        |--------------------------------------------------------------------------
-        */
+        /**
+         * --------------------------------------------------------------------------
+         * Optimized Due / Available Months Calculation
+         * --------------------------------------------------------------------------
+         */
         $allMonths = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December'
         ];
+
         $currentMonth = Carbon::now()->month;
 
         foreach ($students->items() as $student) {
@@ -87,10 +105,18 @@ class StudentController extends Controller
                 max(0, $currentMonth - $admissionMonth + 1)
             );
 
-            $dueMonths = array_values(array_diff($monthsTillNow, $paidMonths));
+            $dueMonths = array_values(
+                array_diff($monthsTillNow, $paidMonths)
+            );
 
-            $monthsTillDecember = array_slice($allMonths, $admissionMonth - 1);
-            $availableMonths = array_values(array_diff($monthsTillDecember, $paidMonths));
+            $monthsTillDecember = array_slice(
+                $allMonths,
+                $admissionMonth - 1
+            );
+
+            $availableMonths = array_values(
+                array_diff($monthsTillDecember, $paidMonths)
+            );
 
             $student->setAttribute('due_months', $dueMonths);
             $student->setAttribute('available_months', $availableMonths);
@@ -120,6 +146,7 @@ class StudentController extends Controller
     {
         $request->validate([
             'full_name' => 'required|string|max:255',
+            'version' => 'required|string|max:50',
             'fathers_name' => 'required|string|max:255',
             'mothers_name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
@@ -138,14 +165,27 @@ class StudentController extends Controller
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-            $imagePath = $file->storeAs('students', $filename, 'public');
+
+            $filename = time() . '_' .
+                Str::random(10) . '.' .
+                $file->getClientOriginalExtension();
+
+            $imagePath = $file->storeAs(
+                'students',
+                $filename,
+                'public'
+            );
         }
 
         $lastStudent = Student::latest('id')->first();
 
         if ($lastStudent && $lastStudent->student_id) {
-            $lastNumber = (int) str_replace('STD-', '', $lastStudent->student_id);
+            $lastNumber = (int) str_replace(
+                'STD-',
+                '',
+                $lastStudent->student_id
+            );
+
             $studentId = 'STD-' . ($lastNumber + 1);
         } else {
             $studentId = 'STD-1001';
@@ -153,6 +193,7 @@ class StudentController extends Controller
 
         $student = Student::create([
             'full_name' => $request->full_name,
+            'version' => $request->version,
             'fathers_name' => $request->fathers_name,
             'mothers_name' => $request->mothers_name,
             'student_id' => $studentId,
@@ -220,6 +261,7 @@ class StudentController extends Controller
     {
         $request->validate([
             'full_name' => 'required|string|max:255',
+            'version' => 'required|string|max:50',
             'phone' => 'required|string|max:20',
             'section_id' => 'required|exists:sections,id',
             'class_id' => 'required|exists:clss_m_s,id',
@@ -239,17 +281,30 @@ class StudentController extends Controller
         $imagePath = $student->image;
 
         if ($request->hasFile('image')) {
-            if ($student->image && Storage::disk('public')->exists($student->image)) {
+
+            if (
+                $student->image &&
+                Storage::disk('public')->exists($student->image)
+            ) {
                 Storage::disk('public')->delete($student->image);
             }
 
             $file = $request->file('image');
-            $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-            $imagePath = $file->storeAs('students', $filename, 'public');
+
+            $filename = time() . '_' .
+                Str::random(10) . '.' .
+                $file->getClientOriginalExtension();
+
+            $imagePath = $file->storeAs(
+                'students',
+                $filename,
+                'public'
+            );
         }
 
         $student->update([
             'full_name' => $request->full_name,
+            'version' => $request->version,
             'phone' => $request->phone,
             'section_id' => $request->section_id,
             'class_id' => $request->class_id,
@@ -279,7 +334,10 @@ class StudentController extends Controller
      */
     public function destroy(Student $student)
     {
-        if ($student->image && Storage::disk('public')->exists($student->image)) {
+        if (
+            $student->image &&
+            Storage::disk('public')->exists($student->image)
+        ) {
             Storage::disk('public')->delete($student->image);
         }
 

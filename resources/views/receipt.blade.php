@@ -6,7 +6,6 @@
     <title>Money Receipt</title>
 
     <style>
-
         @page {
             size: 170mm 160mm;
             margin: 5mm;
@@ -23,7 +22,6 @@
         /* =========================
            RECEIPT
         ========================= */
-
         .receipt {
             max-width: 650px;
             margin: auto;
@@ -36,7 +34,6 @@
         /* =========================
            HEADER
         ========================= */
-
         .header {
             padding: 12px 18px 8px;
         }
@@ -85,7 +82,6 @@
         /* =========================
            INSTITUTE LOGO
         ========================= */
-
         .logo-wrapper {
             width: 58px;
             height: 58px;
@@ -121,7 +117,6 @@
         /* =========================
            CONTENT
         ========================= */
-
         .content {
             padding: 10px 18px 12px;
         }
@@ -129,7 +124,6 @@
         /* =========================
            INFO BOX
         ========================= */
-
         .info-box {
             border: 1px solid #e2e8f0;
             border-radius: 8px;
@@ -178,7 +172,6 @@
         /* =========================
            STATUS
         ========================= */
-
         .status {
             background: #16a34a;
             color: #ffffff;
@@ -191,7 +184,6 @@
         /* =========================
            PAYMENT TABLE
         ========================= */
-
         .payment-table {
             width: 100%;
             border-collapse: collapse;
@@ -216,7 +208,6 @@
         /* =========================
            TOTAL BOX
         ========================= */
-
         .total-box {
             margin-top: 12px;
             border: 1px solid #dbeafe;
@@ -241,7 +232,6 @@
         /* =========================
            FOOTER
         ========================= */
-
         .footer {
             text-align: center;
             padding: 8px 10px 12px;
@@ -262,9 +252,7 @@
         /* =========================
            PRINT
         ========================= */
-
         @media print {
-
             body {
                 background: #ffffff;
             }
@@ -272,11 +260,8 @@
             .receipt {
                 box-shadow: none;
             }
-
         }
-
     </style>
-
 </head>
 
 
@@ -284,19 +269,15 @@
 
 <div class="receipt">
 
-
     <!-- =========================
          HEADER
     ========================== -->
-
     <div class="header">
 
         <table width="100%" cellpadding="0" cellspacing="0">
-
             <tr>
 
                 <!-- LOGO -->
-
                 <td width="65" valign="middle">
 
                     @if($institute?->logo)
@@ -327,31 +308,22 @@
 
 
                 <!-- INSTITUTE NAME -->
-
                 <td class="brand-area">
 
                     <h1 class="brand">
-
                         {{ $institute?->institute_name ?? 'Betikrom Academic Care' }}
-
                     </h1>
 
-
                     <div class="receipt-title">
-
                         <span>—</span>
-
                         Money Receipt
-
                         <span>—</span>
-
                     </div>
 
                 </td>
 
 
                 <!-- RECEIPT INFORMATION -->
-
                 <td class="receipt-info" width="180">
 
                     <strong>Receipt No:</strong>
@@ -363,59 +335,46 @@
                     <br>
 
                     <strong>Date:</strong>
-
                     {{ $payment->payment_date ?? 'N/A' }}
 
                 </td>
 
             </tr>
-
         </table>
-
 
         <div class="top-line"></div>
 
     </div>
 
 
-
     <!-- =========================
          CONTENT
     ========================== -->
-
     <div class="content">
 
 
         <!-- =========================
              STUDENT + PAYMENT INFO
         ========================== -->
-
         <table width="100%" cellpadding="0" cellspacing="0">
 
             <tr>
 
-
                 <!-- =========================
                      STUDENT INFO
                 ========================== -->
-
                 <td width="49%" valign="top">
 
                     <div class="info-box">
 
-
                         <div class="info-header student-header">
-
                             STUDENT INFO
-
                         </div>
-
 
                         <div class="info-content">
 
 
                             <!-- NAME -->
-
                             <div class="info-row">
 
                                 <span class="label">
@@ -428,7 +387,6 @@
 
 
                             <!-- ID -->
-
                             <div class="info-row">
 
                                 <span class="label">
@@ -441,33 +399,42 @@
 
 
                             <!-- CLASS -->
-
                             <div class="info-row">
 
                                 <span class="label">
                                     Class
                                 </span>
 
-                               {{ $payment->student?->classInfo?->class_name ?? 'N/A' }}
+                                {{ $payment->student?->classInfo?->class_name ?? 'N/A' }}
+
+                            </div>
+
+
+                            <!-- VERSION -->
+                            <div class="info-row">
+
+                                <span class="label">
+                                    Version
+                                </span>
+
+                                {{ $payment->student?->version ?? 'N/A' }}
 
                             </div>
 
 
                             <!-- SECTION -->
-
                             <div class="info-row">
 
                                 <span class="label">
                                     Section
                                 </span>
 
-                               {{ $payment->student?->section?->section_name ?? 'N/A' }}
+                                {{ $payment->student?->section?->section_name ?? 'N/A' }}
 
                             </div>
 
 
                             <!-- PHONE -->
-
                             <div class="info-row">
 
                                 <span class="label">
@@ -492,24 +459,18 @@
                 <!-- =========================
                      PAYMENT INFO
                 ========================== -->
-
                 <td width="49%" valign="top">
 
                     <div class="info-box">
 
-
                         <div class="info-header payment-header">
-
                             PAYMENT INFO
-
                         </div>
-
 
                         <div class="info-content">
 
 
                             <!-- MONTH -->
-
                             <div class="info-row">
 
                                 <span class="label">
@@ -522,7 +483,6 @@
 
 
                             <!-- METHOD -->
-
                             <div class="info-row">
 
                                 <span class="label">
@@ -535,7 +495,6 @@
 
 
                             <!-- STATUS -->
-
                             <div class="info-row">
 
                                 <span class="label">
@@ -543,9 +502,7 @@
                                 </span>
 
                                 <span class="status">
-
                                     {{ ucfirst($payment->status ?? 'N/A') }}
-
                                 </span>
 
                             </div>
@@ -562,11 +519,9 @@
         </table>
 
 
-
         <!-- =========================
              PAYMENT TABLE
         ========================== -->
-
         <table class="payment-table">
 
             <thead>
@@ -594,7 +549,6 @@
 
 
                 <!-- MONTHLY FEE -->
-
                 <tr>
 
                     <td>
@@ -606,20 +560,16 @@
                     </td>
 
                     <td>
-
                         BDT {{ number_format(
                             $payment->amount ?? 0,
                             2
                         ) }}
-
                     </td>
 
                 </tr>
 
 
-
                 <!-- PAID AMOUNT -->
-
                 <tr>
 
                     <td>
@@ -627,32 +577,24 @@
                     </td>
 
                     <td>
-
                         <strong>
                             Paid Amount
                         </strong>
-
                     </td>
 
                     <td>
-
                         <strong>
-
                             BDT {{ number_format(
                                 $payment->paid_amount ?? 0,
                                 2
                             ) }}
-
                         </strong>
-
                     </td>
 
                 </tr>
 
 
-
                 <!-- ADMISSION FEE -->
-
                 @if($payment->admission_fee)
 
                     <tr>
@@ -666,12 +608,10 @@
                         </td>
 
                         <td>
-
                             BDT {{ number_format(
                                 $payment->admission_fee,
                                 2
                             ) }}
-
                         </td>
 
                     </tr>
@@ -679,17 +619,13 @@
                 @endif
 
 
-
                 <!-- EXAM FEE -->
-
                 @if($payment->exam_fee)
 
                     <tr>
 
                         <td>
-
                             {{ $payment->admission_fee ? 3 : 2 }}
-
                         </td>
 
                         <td>
@@ -697,12 +633,10 @@
                         </td>
 
                         <td>
-
                             BDT {{ number_format(
                                 $payment->exam_fee,
                                 2
                             ) }}
-
                         </td>
 
                     </tr>
@@ -715,11 +649,9 @@
         </table>
 
 
-
         <!-- =========================
              TOTAL
         ========================== -->
-
         <div class="total-box">
 
             <table width="100%">
@@ -727,28 +659,18 @@
                 <tr>
 
                     <td class="total-title">
-
                         TOTAL PAID
-
                     </td>
-
 
                     <td class="total-amount">
 
                         BDT {{ number_format(
-
                             ($payment->paid_amount ?? 0)
-
                             +
-
                             ($payment->admission_fee ?? 0)
-
                             +
-
                             ($payment->exam_fee ?? 0),
-
                             2
-
                         ) }}
 
                     </td>
@@ -759,15 +681,12 @@
 
         </div>
 
-
     </div>
-
 
 
     <!-- =========================
          FOOTER
     ========================== -->
-
     <div class="footer">
 
         <span class="line"></span>
@@ -777,7 +696,6 @@
         <span class="line"></span>
 
     </div>
-
 
 </div>
 
